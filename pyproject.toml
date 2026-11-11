@@ -17,6 +17,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "ruff>=0.8"]
+embeddings = [
+    "beautifulsoup4>=4.12",
+    "datasets>=3.0",
+    "huggingface_hub>=0.26",
+    "sentence-transformers>=3.3",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -28,9 +34,13 @@ packages = ["agent", "mcp_server"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["*.ipynb"]  # Kaggle notebook is generated from embeddings/finetune.py
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"demo-gradio/app.py" = ["E501"]  # HTML and Markdown templates
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

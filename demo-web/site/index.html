@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEC Filing Search</title>
+<style>
+  :root {
+    --bg: #f8fafc; --panel: #ffffff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --accent: #2563eb; --good: #15803d; --good-bg: #f0fdf4; --warn-bg: #fef3c7; --warn: #92400e;
+    --chip: #eff6ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1120; --panel: #111827; --ink: #e5e7eb; --muted: #94a3b8; --line: #1f2937;
+      --accent: #60a5fa; --good: #4ade80; --good-bg: #052e1a; --warn-bg: #422006; --warn: #fcd34d;
+      --chip: #172554;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 18px; max-width: 900px; }
+  .lede b { color: var(--ink); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .form { display: grid; grid-template-columns: minmax(200px, 1fr) 3fr auto; gap: 10px; align-items: end; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px;
+          text-transform: uppercase; letter-spacing: .04em; }
+  select, input { width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+                  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 22px;
+           background: var(--accent); color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .examples { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .examples span.lbl { font-size: 12px; color: var(--muted); font-weight: 600; margin-right: 2px; }
+  .chip { background: var(--chip); color: var(--ink); border: 1px solid var(--line); border-radius: 999px;
+          padding: 5px 12px; font-size: 13px; font-weight: 500; text-align: left; }
+  .chip small { color: var(--muted); }
+  #status { margin: 14px 2px; font-size: 13px; color: var(--muted); min-height: 20px; }
+  #status.ready { color: var(--good); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .col h2 { font-size: 15px; margin: 0 0 10px; }
+  .col.tuned h2 { color: var(--good); }
+  .col h2 small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+          margin-bottom: 10px; }
+  .col.tuned .card:first-of-type { border-color: var(--good); }
+  .meta { font-size: 13px; display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .meta .score { font-family: ui-monospace, Consolas, monospace; color: var(--muted); white-space: nowrap; }
+  .text { font-size: 14px; }
+  .foot { margin-top: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+          font-size: 12.5px; flex-wrap: wrap; }
+  .foot a { color: var(--accent); }
+  .diff { background: var(--warn-bg); color: var(--warn); border-radius: 6px; padding: 1px 8px; }
+  details { margin-top: 26px; }
+  summary { cursor: pointer; font-weight: 600; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; max-width: 680px; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 7px 10px; text-align: left; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td.num { font-family: ui-monospace, Consolas, monospace; }
+  .note { color: var(--muted); font-size: 13.5px; max-width: 900px; }
+  .links a { color: var(--accent); margin-right: 14px; }
+  @media (max-width: 760px) {
+    .form, .cols { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>SEC Filing Search</h1>
+  <p class="lede">
+    Ask a question about a US public company. Two embedding models search the same <b>1,422 passages from
+    10-K filings</b> of 24 companies, and you see their top results side by side: my
+    <b>fine-tuned model</b> and the original <b>bge-small</b> it started from. Companies marked
+    <b>unseen</b> were held out of training, so they are the fairest test. The first four examples are real
+    test questions where the two models disagree. Both models run <b>entirely in your browser</b>.
+  </p>
+
+  <div class="panel">
+    <div class="form">
+      <div><label for="company">Company</label><select id="company"></select></div>
+      <div><label for="question">Question</label>
+        <input id="question" placeholder="e.g. What supply-chain risks does the company face?"></div>
+      <button id="go" disabled>Search</button>
+    </div>
+    <div class="examples" id="examples"><span class="lbl">Try:</span></div>
+  </div>
+
+  <div id="status">Loading models (about 60 MB on the first visit, then cached)…</div>
+
+  <div class="cols">
+    <section class="col tuned" id="out-tuned"></section>
+    <section class="col base" id="out-base"></section>
+  </div>
+
+  <details>
+    <summary>How well does it work? Benchmark, method and limitations</summary>
+    <p class="note">355 questions from 6 companies never seen in training (Chevron, Johnson &amp; Johnson,
+      Meta, Microsoft, Oracle, Walmart). Each question is ranked against all 355 passages from those
+      companies; exactly one passage is correct.</p>
+    <table>
+      <thead><tr><th>Metric</th><th>Base bge-small</th><th>Fine-tuned</th><th>Change</th></tr></thead>
+      <tbody id="bench"></tbody>
+    </table>
+    <p class="note" id="int8note"></p>
+    <p class="note"><b>How it was built:</b> 10-K filings from SEC EDGAR, split into passages from Items 1, 1A, 7
+      and 7A; an LLM wrote one analyst-style question per passage; the split is by company to avoid leakage;
+      fine-tuned with MultipleNegativesRankingLoss (in-batch negatives) on a T4 GPU. In this page the models run
+      as int8 ONNX through Transformers.js, passage vectors are precomputed, and only your question is encoded
+      live. <b>Limitations:</b> the training questions are synthetic; only narrative 10-K text is covered;
+      free-form questions have no ground truth, so judge the passages by reading them. Similarity scores are on
+      different scales for the two models, so compare passages, not numbers.</p>
+    <p class="links">
+      <a href="https://huggingface.co/jc4845/bge-small-sec-filings" target="_blank">Model</a>
+      <a href="https://huggingface.co/datasets/jc4845/sec-10k-retrieval-qa" target="_blank">Dataset</a>
+      <a href="https://github.com/Jaydeep4845/dealscope-agent" target="_blank">Code (dealscope-agent)</a>
+    </p>
+  </details>
+</main>
+
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2";
+
+const QUERY_PREFIX = "Represent this sentence for searching relevant passages: ";
+const MODELS = { tuned: "jc4845/bge-small-sec-filings", base: "Xenova/bge-small-en-v1.5" };
+const TOP_K = 5;
+const NAMES = {
+  AAPL: "Apple", MSFT: "Microsoft", NVDA: "Nvidia", GOOGL: "Alphabet (Google)", META: "Meta",
+  CRM: "Salesforce", ADBE: "Adobe", ORCL: "Oracle", JPM: "JPMorgan Chase", GS: "Goldman Sachs",
+  V: "Visa", MA: "Mastercard", PYPL: "PayPal", BLK: "BlackRock", JNJ: "Johnson & Johnson",
+  PFE: "Pfizer", UNH: "UnitedHealth", MRK: "Merck", CVX: "Chevron", NEE: "NextEra Energy",
+  DUK: "Duke Energy", WMT: "Walmart", COST: "Costco", HD: "Home Depot",
+};
+const SECTIONS = { "Item 1": "Business", "Item 1A": "Risk Factors", "Item 7": "MD&A", "Item 7A": "Market Risk" };
+const BENCH = [ // full-precision results from the training run (PyTorch)
+  ["Recall@1 (correct passage ranked first)", 0.730, 0.797],
+  ["MRR@10", 0.816, 0.868],
+  ["NDCG@10", 0.854, 0.898],
+  ["Recall@10", 0.972, 0.989],
+];
+// Held-out benchmark questions where, with these int8 models and searching within the company, the
+// fine-tuned model ranks the correct passage first and the base model does not (36 such questions vs
+// 14 the other way), plus two free-form questions.
+const EXAMPLES = [
+  ["MSFT", "What methodology does Microsoft use to assess and record impairments of equity investments and goodwill?"],
+  ["META", "What voting structure does META use and how does it affect shareholder influence?"],
+  ["ORCL", "What potential litigation and stock dilution risks does Oracle face that could affect its business?"],
+  ["WMT", "What factors contributed to Walmart's increased working capital deficit and higher cash balances as of January 31, 2026?"],
+  ["CVX", "How do changes in oil and gas prices affect earnings?"],
+  ["ALL", "How does the company manage interest rate risk?"],
+];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let passages, meta, emb = {}, extractors = {};
+
+function companyLabel(t) {
+  return `${NAMES[t] || t} (${t})${meta.held_out.includes(t) ? " · unseen" : ""}`;
+}
+
+async function loadData() {
+  [passages, meta] = await Promise.all([
+    fetch("data/passages.json").then((r) => r.json()),
+    fetch("data/meta.json").then((r) => r.json()),
+  ]);
+  for (const name of Object.keys(MODELS)) {
+    const buf = await fetch(`data/emb_${name}.bin`).then((r) => r.arrayBuffer());
+    emb[name] = new Float32Array(buf);
+  }
+  const tickers = [...new Set(passages.map((p) => p.ticker))].sort((a, b) => (NAMES[a] || a).localeCompare(NAMES[b] || b));
+  $("company").innerHTML = `<option value="ALL">All companies</option>` +
+    tickers.map((t) => `<option value="${t}">${esc(companyLabel(t))}</option>`).join("");
+  $("company").value = "MSFT";
+  for (const [t, q] of EXAMPLES) {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.innerHTML = `${esc(q.length > 70 ? q.slice(0, 68) + "…" : q)} <small>· ${t === "ALL" ? "All" : esc(NAMES[t])}</small>`;
+    b.title = q;
+    b.onclick = () => { $("company").value = t; $("question").value = q; run(); };
+    $("examples").appendChild(b);
+  }
+  $("bench").innerHTML = BENCH.map(([m, b, a]) =>
+    `<tr><td>${m}</td><td class="num">${b.toFixed(3)}</td><td class="num"><b>${a.toFixed(3)}</b></td>` +
+    `<td class="num">+${(a - b).toFixed(3)}</td></tr>`).join("");
+  const i8 = meta.int8_benchmark;
+  if (i8) {
+    $("int8note").textContent = `The int8 models running in this page score Recall@1 ${i8.base["recall@1"].toFixed(3)} ` +
+      `(base) vs ${i8.tuned["recall@1"].toFixed(3)} (fine-tuned) and NDCG@10 ${i8.base["ndcg@10"].toFixed(3)} vs ` +
+      `${i8.tuned["ndcg@10"].toFixed(3)} on the same test.`;
+  }
+}
+
+async function loadModels() {
+  for (const [name, id] of Object.entries(MODELS)) {
+    extractors[name] = await pipeline("feature-extraction", id, { dtype: "q8" });
+  }
+}
+
+async function embed(name, text) {
+  const out = await extractors[name](QUERY_PREFIX + text, { pooling: "cls", normalize: true });
+  return out.data;
+}
+
+function topK(name, q, ticker) {
+  const E = emb[name], dim = meta.dim, scores = [];
+  for (let i = 0; i < passages.length; i++) {
+    if (ticker !== "ALL" && passages[i].ticker !== ticker) continue;
+    let s = 0;
+    for (let j = 0; j < dim; j++) s += E[i * dim + j] * q[j];
+    scores.push([i, s]);
+  }
+  return scores.sort((a, b) => b[1] - a[1]).slice(0, TOP_K);
+}
+
+function render(hits, otherTop, title, subtitle) {
+  const cards = hits.map(([i, s], r) => {
+    const p = passages[i];
+    const text = p.passage.length > 480 ? p.passage.slice(0, 478) + "…" : p.passage;
+    const diff = r === 0 && i !== otherTop ? `<span class="diff">different #1 from the other model</span>` : "<span></span>";
+    return `<article class="card">
+      <div class="meta"><span><b>#${r + 1}</b> · ${esc(NAMES[p.ticker] || p.ticker)} · ${esc(p.section)} ${esc(SECTIONS[p.section] || "")}</span>
+        <span class="score">${s.toFixed(3)}</span></div>
+      <div class="text">${esc(text)}</div>
+      <div class="foot">${diff}<a href="${esc(p.source_url)}" target="_blank" rel="noopener">Open the 10-K on SEC EDGAR ↗</a></div>
+    </article>`;
+  }).join("");
+  return `<h2>${title}<small>${subtitle}</small></h2>${cards}`;
+}
+
+async function run() {
+  const q = $("question").value.trim();
+  if (!q || !extractors.base) return;
+  $("go").disabled = true;
+  $("status").className = "";
+  $("status").textContent = "Searching…";
+  const t0 = performance.now();
+  const ticker = $("company").value;
+  const [qt, qb] = await Promise.all([embed("tuned", q), embed("base", q)]);
+  const tuned = topK("tuned", qt, ticker), base = topK("base", qb, ticker);
+  $("out-tuned").innerHTML = render(tuned, base[0][0], "Fine-tuned model", "jc4845/bge-small-sec-filings");
+  $("out-base").innerHTML = render(base, tuned[0][0], "Base model", "BAAI/bge-small-en-v1.5");
+  $("status").className = "ready";
+  $("status").textContent = `Searched ${ticker === "ALL" ? "all companies" : NAMES[ticker]} in ${Math.round(performance.now() - t0)} ms, in your browser.`;
+  $("go").disabled = false;
+}
+
+$("go").onclick = run;
+$("question").addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
+
+try {
+  await loadData();
+  await loadModels();
+  $("go").disabled = false;
+  $("status").className = "ready";
+  $("status").textContent = "Models loaded. Pick an example or type a question.";
+} catch (err) {
+  $("status").textContent = "Could not load the models: " + err.message;
+  console.error(err);
+}
+</script>
+</body>
+</html>

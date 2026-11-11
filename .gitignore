@@ -15,3 +15,8 @@ build/
 node_modules/
 .next/
 data/raw/
+embeddings/data/
+embeddings/output/
+demo-web/onnx_export/
+demo-web/site/data/
+demo-gradio/data/

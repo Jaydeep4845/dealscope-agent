@@ -1,0 +1,7 @@
+{
+  "base_model": "BAAI/bge-small-en-v1.5",
+  "n_train": 1067,
+  "n_test": 355,
+  "base": {"ndcg@10": 0.8544, "mrr@10": 0.8162, "recall@1": 0.7296, "recall@10": 0.9718},
+  "fine_tuned": {"ndcg@10": 0.8978, "mrr@10": 0.868, "recall@1": 0.7972, "recall@10": 0.9887}
+}
